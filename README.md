@@ -64,6 +64,7 @@ In the second half of the semester, you will be part of a **team** attending **S
 - Git installed locally
 - Python 3.x
 - A GitHub account
+- To Use SSH instead of HTTPS:  git remote set-url origin git@github.com:d26clarke/DS5111-011.git
 
 ### Environment Setup
 
