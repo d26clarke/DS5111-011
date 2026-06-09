@@ -6,3 +6,6 @@ env:
 
 update:  env
 	. env/bin/activate; pip install -r requirements.txt
+
+lint:  env
+	. env/bin/activate; pylint python/cleanYoutubeIDs.py
