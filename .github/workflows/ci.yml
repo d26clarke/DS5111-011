@@ -1,0 +1,43 @@
+name: DS5111 Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Define the execution matrix
+    strategy:
+      matrix:
+        python-version: ['3.12']
+      # Optional: set fail-fast to false so one failing version doesn't cancel the other
+      fail-fast: false
+      
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set up Python runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }} 
+
+    - name: Check Python Version
+      run: |
+        python --version
+
+#    - name: Install pipeline dependencies
+#      run: |
+#        make update
+#
+#    - name: Lint codebase with Pylint
+#      run: |
+#        make lint
+#
+#    - name: Execute automated test suite with Pytest
+#      run: |
+#        make test
