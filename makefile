@@ -9,3 +9,6 @@ update:  env
 
 lint:  env
 	. env/bin/activate; pylint python/cleanYoutubeIDs.py
+
+test:  env
+	. env/bin/activate; pytest -vv tests

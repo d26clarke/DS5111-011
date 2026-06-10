@@ -1,7 +1,7 @@
 import sys
 import io
 import pytest
-from python.cleanYoutubeIDs.py import main
+from python.cleanYoutubeIDs import main
 
 def test_script_execution(monkeypatch, capsys):
     # 1. Simulate the standard input data
