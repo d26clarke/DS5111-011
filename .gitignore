@@ -1,0 +1,5 @@
+# =============================================================================
+# ENVIRONMENT VARIABLES
+# Never commit secrets, API keys, or environment-specific configuration.
+# =============================================================================
+.env
