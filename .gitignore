@@ -3,3 +3,4 @@
 # Never commit secrets, API keys, or environment-specific configuration.
 # =============================================================================
 .env
+__pycache__/
