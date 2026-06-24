@@ -1,5 +1,5 @@
 '''
-DS5111 LAB04
+DS5111 LAB04 and LAB05
 Derrick Clarke (thq3hn)
 
 '''
@@ -44,22 +44,32 @@ def main():
             continue
             
         logging.info(f"Processing transcript extraction for video: {video_id}")
-        
+
         try:
+            # Unpack the incoming stream JSON record
+            payload = json.loads(line)
+            video_id = payload.get("video_id")
+            raw_text = payload.get("raw_text")
+
+            if not video_id or not raw_text:
+                logging.warning(f"Malformed stream entry skipped. Missing keys in payload: {line}")
+                continue
+        
+        #try:
             # Execute instance lookup method
-            fetched_transcript = ytt_api.fetch(video_id)
-            transcript_list = fetched_transcript.to_raw_data()
+        #    fetched_transcript = ytt_api.fetch(video_id)
+        #    transcript_list = fetched_transcript.to_raw_data()
             
             # Stream Architecture Optimization: Structure the data as an explicit, 
             # single-line payload optimized for Snowflake VARIANT performance.
-            payload = {
-                "video_id": video_id,
-                "transcript": transcript_list
-            }
+        #    payload = {
+        #        "video_id": video_id,
+        #        "transcript": transcript_list
+        #    }
             
             # Write out line-by-line to standard out utilizing JSONL architecture
-            sys.stdout.write(json.dumps(payload) + "\n")
-            sys.stdout.flush()
+            #sys.stdout.write(json.dumps(payload) + "\n")
+            #sys.stdout.flush()
             
         except Exception as e:
             logging.error(f"Failed to fetch YouTube transcript for {video_id}: {str(e)}")

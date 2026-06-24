@@ -2,3 +2,5 @@ pandas
 numpy
 pylint
 pytest
+google
+google.genai

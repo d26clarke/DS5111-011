@@ -9,3 +9,5 @@ update:  env
 
 lint:  env
 	. env/bin/activate; pylint python/cleanYoutubeIDs.py
+test_enrich:
+	@. env/bin/activate && cat mock_transcripts.jsonl | python -u python/enrich_transcripts.py | python python/validate_schema.py
