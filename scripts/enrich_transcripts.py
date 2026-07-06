@@ -26,7 +26,7 @@ logging.basicConfig(
     handlers=[logging.FileHandler("pipeline_enrichment.log"), logging.StreamHandler(sys.stderr)]
 )
 
-class EnrichmentStrategy(ABC):
+class LLMStrategy(ABC):
     """Abstract base class defining the contract for text enrichment strategies.
 
     Classes implementing this interface are responsible for parsing unstructured
@@ -34,11 +34,16 @@ class EnrichmentStrategy(ABC):
     or classification logic to produce structured data.
 
     Methods:
-        enrich(raw_text): Abstract method to process text and return structured metrics.
+        call_llm(raw_text): Abstract method to process text and return string.
+        parse_response(raw_response): Abstract method to parse response and return dictionary.
     """
     @abstractmethod
-    def enrich(self, raw_text: str) -> dict:
-        """Must accept raw transcript text and return a dict of extracted structured data."""
+    def call_llm(self, raw_text: str) -> str:
+        """Must accept raw transcript text and return the LLM's raw text response."""
+
+    @abstractmethod
+    def parse_response(self, raw_response: str) -> dict:
+        """Must accept the LLM's raw response and return a structured dict."""
 
 def main():
     # Validate API initialization requirements
