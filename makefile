@@ -8,6 +8,8 @@ update:  env
 	. env/bin/activate; pip install -r requirements.txt
 
 lint:  env
-	. env/bin/activate; pylint python/cleanYoutubeIDs.py
+	. env/bin/activate; pylint scripts/cleanYoutubeIDs.py
 test_enrich:
-	@. env/bin/activate && cat mock_transcripts.jsonl | python -u python/enrich_transcripts.py | python python/validate_schema.py
+	@. env/bin/activate && cat mock_transcripts.jsonl | python -u scripts/enrich_transcripts.py | python python/validate_schema.py
+test:
+	@. env/bin/activate && pytest -v scripts/test_enrich_transcripts.py
