@@ -7,9 +7,14 @@ import sys
 import os
 import json
 import logging
+
+#For Lab6a
+from abc import ABC, abstractmethod
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
 
 # Load local environment configurations (.env)
 load_dotenv()
@@ -20,6 +25,20 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.FileHandler("pipeline_enrichment.log"), logging.StreamHandler(sys.stderr)]
 )
+
+class EnrichmentStrategy(ABC):
+    """Abstract base class defining the contract for text enrichment strategies.
+
+    Classes implementing this interface are responsible for parsing unstructured
+    text—such as automated transcripts—and applying specific extraction, tagging,
+    or classification logic to produce structured data.
+
+    Methods:
+        enrich(raw_text): Abstract method to process text and return structured metrics.
+    """
+    @abstractmethod
+    def enrich(self, raw_text: str) -> dict:
+        """Must accept raw transcript text and return a dict of extracted structured data."""
 
 def main():
     # Validate API initialization requirements
