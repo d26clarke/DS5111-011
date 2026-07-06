@@ -2,8 +2,9 @@ import sys
 import os
 import json
 import logging
+import argparse
 
-# For Lab6a
+# For Lab6b
 from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
@@ -21,6 +22,8 @@ logging.basicConfig(
     handlers=[logging.FileHandler("pipeline_enrichment.log"), logging.StreamHandler(sys.stderr)]
 )
 
+
+# Abstract interface contract
 
 class LLMStrategy(ABC):
     """Abstract base class defining the contract for text enrichment strategies.
@@ -43,11 +46,10 @@ class LLMStrategy(ABC):
         """Must accept the LLM's raw response and return a structured dict."""
 
 
+# Concrete strategy: Google Gemini
+
 class GeminiStrategy(LLMStrategy):
     """Concrete LLM strategy implementation utilizing the Google Gemini API.
-
-    This class manages authentication with Gemini services and orchestrates the
-    end-to-end pipeline of prompt construction, model execution, and response parsing.
 
     Attributes:
         client (genai.Client): The initialized Google GenAI client instance.
@@ -57,7 +59,6 @@ class GeminiStrategy(LLMStrategy):
             is missing during initialization.
     """
 
-    # ── Extraction schema shared between call_llm and parse_response ──────────
     _RESPONSE_SCHEMA = {
         "type": "OBJECT",
         "properties": {
@@ -81,27 +82,15 @@ class GeminiStrategy(LLMStrategy):
             raise EnvironmentError("Missing GEMINI_API_KEY")
         self.client = genai.Client()
 
-    # Completed TODO 1: prompt construction + generate_content call 
     def call_llm(self, raw_text: str) -> str:
         """Construct the extraction prompt and invoke the Gemini model.
-
-        Builds the strict JSON-extraction prompt from the supplied transcript
-        snippet, calls ``client.models.generate_content`` with the shared
-        response schema, and returns the model's raw text response for
-        downstream parsing.
 
         Args:
             raw_text: The unstructured transcript snippet to be analyzed.
 
         Returns:
             The raw JSON string returned by the Gemini model.
-
-        Raises:
-            Exception: Propagates any API or network error to the caller so
-                the pipeline's per-record error handler can emit a FAILED
-                payload rather than silently dropping the record.
         """
-        # Mirror the prompt that previously lived inline in main()
         prompt = f"""
         Analyze the following lecture transcript snippet. Extract all tech stack components mentioned
         (e.g., Snowflake, AWS Lambda) and any books/literature referenced.
@@ -111,7 +100,6 @@ class GeminiStrategy(LLMStrategy):
 
         logging.info("Sending transcript to Gemini for enrichment.")
 
-        # Mirror the generate_content call that previously lived inline in main()
         response = self.client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
@@ -124,30 +112,21 @@ class GeminiStrategy(LLMStrategy):
         logging.info("Received response from Gemini.")
         return response.text
 
-    # Completed TODO 2: json.loads + schema validation 
     def parse_response(self, raw_response: str) -> dict:
         """Parse the Gemini JSON response and validate its structure.
-
-        Deserializes the raw JSON string returned by ``call_llm``, verifies
-        that both required keys (``tech_stack`` and ``literature_references``)
-        are present and are lists, and returns the validated enrichment dict.
 
         Args:
             raw_response: The raw JSON string returned by the Gemini model.
 
         Returns:
-            A dictionary with keys ``tech_stack`` (list[str]) and
-            ``literature_references`` (list[str]).
+            A validated dictionary with keys 'tech_stack' and 'literature_references'.
 
         Raises:
             json.JSONDecodeError: If the response is not valid JSON.
-            ValueError: If the required keys are missing or are not lists,
-                indicating the model deviated from the enforced schema.
+            ValueError: If required keys are missing or are not lists.
         """
-        # Mirror the json.loads call that previously lived inline in main()
         enrichment_data = json.loads(raw_response)
 
-        # Schema validation — guard against model deviating from the enforced schema
         required_keys = {"tech_stack", "literature_references"}
         missing_keys = required_keys - enrichment_data.keys()
         if missing_keys:
@@ -174,58 +153,182 @@ class GeminiStrategy(LLMStrategy):
         return enrichment_data
 
 
-def main():
-    # Validate API initialization requirements
-    if not os.getenv("GEMINI_API_KEY"):
-        logging.critical("GEMINI_API_KEY environment variable is missing. Terminating pipeline.")
-        sys.exit(1)
+# Pipeline engine
 
-    # Instantiate the strategy — replaces the bare genai.Client() call
-    strategy = GeminiStrategy()
+class TranscriptEnricher:
+    """Pipeline engine that processes a JSONL stream using a pluggable LLM strategy.
 
-    # Process streaming IDs line-by-line from stdin
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
+    This class is intentionally strategy-agnostic — it references only the
+    ``LLMStrategy`` abstract interface and never imports or instantiates a
+    concrete implementation directly. The concrete strategy is injected at
+    construction time by the orchestrator.
 
-        try:
-            # Unpack the incoming stream JSON record
-            payload = json.loads(line)
-            video_id = payload.get("video_id")
-            raw_text = payload.get("raw_text")
+    Attributes:
+        strategy (LLMStrategy): The injected enrichment strategy.
+    """
 
-            if not video_id or not raw_text:
-                logging.warning(
-                    f"Malformed stream entry skipped. Missing keys in payload: {line}"
-                )
+    def __init__(self, strategy: LLMStrategy):
+        self.strategy = strategy
+
+    def run_stream(self):
+        """Read newline-delimited JSON records from stdin, enrich each one, and
+        write the augmented payload to stdout.
+
+        Each input record must contain:
+            - ``video_id`` (str): Unique identifier for the video.
+            - ``raw_text`` (str): Unstructured transcript text to enrich.
+
+        Each output record adds:
+            - ``enriched_data`` (dict): Structured extraction result from the LLM.
+            - ``pipeline_status`` (str): ``"SUCCESS"`` or ``"FAILED"``.
+            - ``error_log`` (str): Present only on ``"FAILED"`` records.
+        """
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
                 continue
 
-            # Delegate to the strategy — replaces the inline prompt + API call
-            raw_response = strategy.call_llm(raw_text)
+            # Declare payload here so the except block can reference it safely
+            payload = None
+            video_id = "UNKNOWN"
 
-            # Delegate parsing and validation to the strategy
-            enrichment_data = strategy.parse_response(raw_response)
+            try:
+                # Unpack the incoming stream JSON record
+                payload = json.loads(line)
+                video_id = payload.get("video_id", "UNKNOWN")
+                raw_text = payload.get("raw_text")
 
-            payload["enriched_data"] = enrichment_data
-            payload["pipeline_status"] = "SUCCESS"
+                if not video_id or not raw_text:
+                    logging.warning(
+                        "Malformed stream entry skipped. "
+                        "Missing 'video_id' or 'raw_text' in payload: %s", line
+                    )
+                    continue
 
-            # Emit the final payload to stdout with an explicit trailing newline
-            sys.stdout.write(json.dumps(payload) + "\n")
-            sys.stdout.flush()
+                # Delegate to the abstract interface — no concrete type referenced here
+                raw_response = self.strategy.call_llm(raw_text)
+                enrichment_data = self.strategy.parse_response(raw_response)
 
-        except Exception as e:
-            logging.error(
-                f"Failed processing record for video_id "
-                f"{video_id if 'video_id' in locals() else 'UNKNOWN'}: {str(e)}"
-            )
+                # Merge structured result into the original payload
+                payload["enriched_data"] = enrichment_data
+                payload["pipeline_status"] = "SUCCESS"
 
-            # Error recovery fallback: emit original payload marked as FAILED
-            if 'payload' in locals():
-                payload["pipeline_status"] = "FAILED"
-                payload["error_log"] = str(e)
+                # Emit the enriched payload to stdout
                 sys.stdout.write(json.dumps(payload) + "\n")
                 sys.stdout.flush()
+
+            except Exception as e:
+                logging.error(
+                    "Failed processing record for video_id %s: %s", video_id, str(e)
+                )
+
+                # FAILED-payload fallback: emit the original payload marked as FAILED
+                # so downstream consumers are never silently starved of a record.
+                if payload is not None:
+                    payload["pipeline_status"] = "FAILED"
+                    payload["error_log"] = str(e)
+                    sys.stdout.write(json.dumps(payload) + "\n")
+                    sys.stdout.flush()
+
+
+# Orchestrator
+
+class PipelineOrchestrator:
+    """Orchestrates strategy selection and pipeline execution.
+
+    This class is the only component that knows about concrete strategy
+    implementations. It reads the runtime ``--engine`` flag, instantiates
+    the appropriate ``LLMStrategy`` subclass, injects it into a
+    ``TranscriptEnricher``, and delegates all stream processing to the engine.
+
+    The ``TranscriptEnricher`` and all downstream components reference only
+    the ``LLMStrategy`` abstract interface — they are completely decoupled
+    from this selection logic.
+
+    Supported engines:
+        gemini: Google Gemini 2.5 Flash via the ``google-genai`` SDK.
+
+    Raises:
+        ValueError: If an unsupported engine name is provided.
+        EnvironmentError: If the selected engine's required API key is absent.
+    """
+
+    # Registry maps CLI flag values to their concrete strategy constructors.
+    # To add a new engine (e.g., OpenAI), register it here — nothing else changes.
+    _STRATEGY_REGISTRY: dict[str, type[LLMStrategy]] = {
+        "gemini": GeminiStrategy,
+    }
+
+    def __init__(self, engine: str):
+        """Resolve the engine name to a concrete strategy and build the pipeline.
+
+        Args:
+            engine: The engine identifier supplied via ``--engine`` at runtime.
+
+        Raises:
+            ValueError: If ``engine`` is not a registered strategy key.
+        """
+        if engine not in self._STRATEGY_REGISTRY:
+            supported = ", ".join(self._STRATEGY_REGISTRY.keys())
+            raise ValueError(
+                f"Unsupported engine '{engine}'. "
+                f"Supported engines: {supported}"
+            )
+
+        logging.info("Initializing pipeline with engine: %s", engine)
+
+        # Instantiate the concrete strategy — only the orchestrator does this
+        strategy: LLMStrategy = self._STRATEGY_REGISTRY[engine]()
+
+        # Inject the strategy into the engine via the abstract interface
+        self.enricher = TranscriptEnricher(strategy)
+
+    def run(self):
+        """Start the pipeline stream processor."""
+        self.enricher.run_stream()
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """Construct and return the CLI argument parser.
+
+    Flags:
+        --engine  (required): Selects the LLM backend at runtime.
+                              Choices are drawn from the orchestrator's registry.
+                              Example: --engine gemini
+
+    Returns:
+        A configured ``argparse.ArgumentParser`` instance.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Transcript Enrichment Pipeline — reads a JSONL stream from stdin, "
+            "enriches each record using the selected LLM engine, and writes "
+            "augmented JSONL to stdout."
+        )
+    )
+    parser.add_argument(
+        "--engine",
+        required=True,
+        choices=list(PipelineOrchestrator._STRATEGY_REGISTRY.keys()),
+        help=(
+            "LLM backend to use for enrichment. "
+            "Currently supported: %(choices)s. "
+            "Example: --engine gemini"
+        )
+    )
+    return parser
+
+
+def main():
+    parser = build_arg_parser()
+    args = parser.parse_args()
+
+    try:
+        orchestrator = PipelineOrchestrator(engine=args.engine)
+        orchestrator.run()
+    except (EnvironmentError, ValueError) as e:
+        logging.critical("Pipeline initialization failed: %s", str(e))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
