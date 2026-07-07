@@ -4,3 +4,5 @@
 2026-06-16 03:46:55,557 - INFO - Proxy credentials detected. Routing traffic via Webshare Residential network.
 2026-06-16 03:50:35,049 - INFO - Pipeline Step 2A (Raw Extraction) started.
 2026-06-16 03:50:35,049 - INFO - Proxy credentials detected. Routing traffic via Webshare Residential network.
+2026-07-07 21:22:00,690 - INFO - Pipeline Step 2A (Raw Extraction) started.
+2026-07-07 21:22:00,691 - WARNING - No proxy credentials found. Running with direct raw local IP routing.

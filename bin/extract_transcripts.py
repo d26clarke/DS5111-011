@@ -16,7 +16,7 @@ load_dotenv("../.env")
 
 # Direct logging statements to a shared audit log asset
 logging.basicConfig(
-    filename='pipeline/logs/pipeline_audit.log',
+    filename='/home/ubuntu/DS5111-011/bin/pipeline/logs/pipeline_audit.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
