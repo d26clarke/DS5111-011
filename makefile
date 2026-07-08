@@ -1,15 +1,27 @@
+ENV = env
+PYTHON = $(VENV)/bin/python3
+PIP = $(ENV)/bin/pip
+
 default:
 	@cat makefile
 
 env:
-	python3 -m venv env; . env/bin/activate; pip install --upgrade pip
+	$(PYTHON) -m venv env; . env/bin/activate; $(PIP) install --upgrade pip
+
+test:
+	$(PYTHON) -m pytest tests/
+
+lint:
+	$(PYTHON) -m pylint bin/ lib/ tests/
+
 
 update:  env
-	. env/bin/activate; pip install -r requirements.txt
+	. env/bin/activate; $(PIP) install -r requirements.txt
 
 lint:  env
-	. env/bin/activate; pylint scripts/cleanYoutubeIDs.py
-test_enrich:
-	@. env/bin/activate && cat mock_transcripts.jsonl | python -u scripts/enrich_transcripts.py | python python/validate_schema.py
+	. env/bin/activate; pylint bin/cleanYoutubeIDs.py
+run:
+	@. env/bin/activate && cat mock_transcripts.jsonl | $(PYTHON) -u bin/enrich_transcripts.py | $(PYTHON) bin/validate_schema.py
+
 test:
-	@. env/bin/activate && pytest -v scripts/test_enrich_transcripts.py
+	@. env/bin/activate && pytest -v tests/test_enrich_transcripts.py
