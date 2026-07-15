@@ -1,6 +1,16 @@
 import io
+import os
+import sys
 import json
 import pytest
+
+# 1. Calculate the absolute path to the '../bin' directory relative to this test file
+bin_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../bin"))
+
+# 2. Append that directory to Python's module search path if it isn't already there
+if bin_path not in sys.path:
+    sys.path.insert(0, bin_path)
+
 from enrich_transcripts import TranscriptEnricher, LLMStrategy
 
 

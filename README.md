@@ -72,6 +72,66 @@ Detailed setup instructions for the Ubuntu AWS instance, GitHub repository, and 
 
 ---
 
+Operational Runbook & Project Overview
+
+This repository contains an automated text-processing pipeline designed to clean YouTube IDs, enrich text transcripts, and validate output schemas. 
+
+The project uses a Makefile to standardize local development and a GitHub Actions workflow to enforce continuous integration (CI) quality gates. 
+
+ENV = env
+PYTHON = $(VENV)/bin/python3
+PIP = $(ENV)/bin/pip
+
+default:
+	@cat makefile
+
+env:
+	$(PYTHON) -m venv env; . env/bin/activate; $(PIP) install --upgrade pip
+
+test:
+	$(PYTHON) -m pytest tests/
+
+lint:
+	$(PYTHON) -m pylint bin/ lib/ tests/
+
+
+update:  env
+	. env/bin/activate; $(PIP) install -r requirements.txt
+
+lint:  env
+	. env/bin/activate; pylint bin/cleanYoutubeIDs.py
+run:
+	@. env/bin/activate && cat mock_transcripts.jsonl | $(PYTHON) -u bin/enrich_transcripts.py | $(PYTHON) bin/validate_schema.py
+
+test:
+	@. env/bin/activate && pytest -v tests/test_enrich_transcripts.py
+
+1. Environment Lifecycle
+
+In a bash shell, 
+
+execute "make env" to create an isolated python environment
+- OR -  
+execute "make update" to pull the latest libraries from requirements.txt into the active environment.
+
+2. Code Quality & Testing
+
+In a bash shell, 
+
+execute "make lint" to run pylint to verify syntax and code style
+
+execute "make test" to execute a python test
+
+3. Execution Pipeline (Run Data Job)
+
+In a bash shell, 
+
+execute "make run"
+
+4. CI/CD pipeline
+
+This project enforces structural and functional validation via a automated GitHub Actions workflow (.github/workflows/ci.yml).
+
 ## Contact
 
 For questions, please refer to the course syllabus or contact the instructor through the course management system.

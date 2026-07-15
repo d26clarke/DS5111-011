@@ -1,43 +1,60 @@
-name: DS5111 Continuous Integration
+name: Continuous Integration Quality Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
-  build-and-test:
+  # JOB 1: Code Style & Syntax Auditing running in parallel
+  lint:
+    name: Code Quality Inspection (Linter)
     runs-on: ubuntu-latest
-
-    # Define the execution matrix
     strategy:
       matrix:
-        python-version: ['3.12']
-      # Optional: set fail-fast to false so one failing version doesn't cancel the other
-      fail-fast: false
-      
+        python-version: ["3.11", "3.12", "3.13"]
+
     steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
 
-    - name: Set up Python runtime
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }} 
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Check Python Version
-      run: |
-        python --version
+      - name: Install Runtime Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-#    - name: Install pipeline dependencies
-#      run: |
-#        make update
-#
-#    - name: Lint codebase with Pylint
-#      run: |
-#        make lint
-#
-#    - name: Execute automated test suite with Pytest
-#      run: |
-#        make test
+      # Pass control directly to the local Makefile interface contract
+      - name: Execute Linter Quality Gate
+        run: make lint
+
+  # JOB 2: Functional Test Executions running in parallel
+  test:
+    name: Unit Testing Engine (Pytest)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Runtime Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Pass control directly to the local Makefile interface contract
+      - name: Execute Automated Test Suite
+        run: make test
