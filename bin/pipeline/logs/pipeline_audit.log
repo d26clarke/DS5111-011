@@ -6,3 +6,15 @@
 2026-06-16 03:50:35,049 - INFO - Proxy credentials detected. Routing traffic via Webshare Residential network.
 2026-07-07 21:22:00,690 - INFO - Pipeline Step 2A (Raw Extraction) started.
 2026-07-07 21:22:00,691 - WARNING - No proxy credentials found. Running with direct raw local IP routing.
+2026-07-15 02:45:04,085 - INFO - Pipeline Step 3 (Snowflake Loader Node) initialized.
+2026-07-15 02:45:04,085 - CRITICAL - Missing critical Snowflake runtime credential bindings. Ingestion aborted.
+2026-07-15 02:46:06,989 - INFO - Pipeline Step 3 (Snowflake Loader Node) initialized.
+2026-07-15 02:46:06,989 - CRITICAL - Missing critical Snowflake runtime credential bindings. Ingestion aborted.
+2026-07-15 02:59:27,006 - INFO - Pipeline Step 3 (Snowflake Loader Node) initialized.
+2026-07-15 02:59:27,006 - CRITICAL - Missing critical Snowflake runtime credential bindings. Ingestion aborted.
+2026-07-15 02:59:38,407 - INFO - Pipeline Step 3 (Snowflake Loader Node) initialized.
+2026-07-15 02:59:38,407 - CRITICAL - Missing critical Snowflake runtime credential bindings. Ingestion aborted.
+2026-07-15 03:00:56,078 - INFO - Pipeline Step 3 (Snowflake Loader Node) initialized.
+2026-07-15 03:00:56,078 - CRITICAL - Missing critical Snowflake runtime credential bindings. Ingestion aborted.
+2026-07-15 03:01:48,477 - INFO - Pipeline Step 3 (Snowflake Loader Node) initialized.
+2026-07-15 03:01:48,477 - CRITICAL - Missing critical Snowflake runtime credential bindings. Ingestion aborted.
