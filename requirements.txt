@@ -4,3 +4,4 @@ pylint
 pytest
 google
 google.genai
+snowflake-connector-python
